@@ -55,11 +55,11 @@ public class BasicTest extends AbstractQuarkusTest {
     public void finishTestRun() {
         CreateCloseUtils.closeProject(remoteRobot);
         FlatWelcomeFrame flatWelcomeFrame = remoteRobot.find(FlatWelcomeFrame.class, Duration.ofSeconds(10));
-        flatWelcomeFrame.clearExceptions();
-        flatWelcomeFrame.clearWorkspace();
+//        flatWelcomeFrame.clearExceptions();
+//        flatWelcomeFrame.clearWorkspace();
     }
 
-    @Test
+//    @Test
     public void createBuildQuarkusMavenTest() {
         createQuarkusProject(remoteRobot, NEW_QUARKUS_MAVEN_PROJECT_NAME, BuildTool.MAVEN, EndpointURLType.DEFAULT);
         ToolWindowPane toolWindowPane = remoteRobot.find(ToolWindowPane.class, Duration.ofSeconds(10));

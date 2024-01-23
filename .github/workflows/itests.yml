@@ -24,7 +24,7 @@ jobs:
         export DISPLAY=:99.0
         Xvfb -ac :99 -screen 0 1920x1080x24 &
         chmod +x gradlew
-        ./gradlew integrationTest
+        ./gradlew integrationTest --info
     - uses: actions/upload-artifact@v2
       with:
         name: ${{ runner.os }}-integration-test-reports
@@ -49,7 +49,7 @@ jobs:
         java-version: 17
     - name: Run integration tests
       run: |
-        ./gradlew integrationTest
+        ./gradlew integrationTest --info
     - uses: actions/upload-artifact@v2
       with:
         name: ${{ runner.os }}-integration-test-reports
@@ -74,7 +74,7 @@ jobs:
         java-version: 17
     - name: Run integration tests
       run: |
-        .\gradlew.bat integrationTest
+        .\gradlew.bat integrationTest --info
       shell: powershell
     - uses: actions/upload-artifact@v2
       with:
