@@ -25,7 +25,7 @@ import java.time.Duration;
  *
  * @author zcervink@redhat.com
  */
-@ExtendWith(ScreenshotAfterTestFailExtension.class)
+//@ExtendWith(ScreenshotAfterTestFailExtension.class)
 abstract public class AbstractQuarkusTest {
     protected static RemoteRobot remoteRobot;
     private static boolean intelliJHasStarted = false;

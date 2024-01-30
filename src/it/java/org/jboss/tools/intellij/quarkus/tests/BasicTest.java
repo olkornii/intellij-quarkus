@@ -15,6 +15,7 @@ import com.intellij.remoterobot.fixtures.ComponentFixture;
 import com.intellij.remoterobot.fixtures.JButtonFixture;
 import com.intellij.remoterobot.fixtures.JTextFieldFixture;
 import com.intellij.remoterobot.fixtures.JTreeFixture;
+import com.intellij.remoterobot.fixtures.dataExtractor.RemoteText;
 import com.intellij.remoterobot.utils.WaitForConditionTimeoutException;
 import com.redhat.devtools.intellij.commonuitest.UITestRunner;
 import com.redhat.devtools.intellij.commonuitest.fixtures.dialogs.FlatWelcomeFrame;
@@ -38,8 +39,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.List;
 
 import static com.intellij.remoterobot.search.locators.Locators.byXpath;
+import static com.intellij.remoterobot.utils.RepeatUtilsKt.waitFor;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -121,7 +124,35 @@ public class BasicTest extends AbstractQuarkusTest {
         ideStatusBar.waitUntilProjectImportIsComplete();
         MainIdeWindow mainIdeWindow = remoteRobot.find(MainIdeWindow.class, Duration.ofSeconds(5));
         mainIdeWindow.maximizeIdeWindow();
-        ideStatusBar.waitUntilAllBgTasksFinish(500);
+//        ideStatusBar.waitUntilAllBgTasksFinish(500);
+        waitUntilAllBgTasksFinish(500);
+    }
+
+    public void waitUntilAllBgTasksFinish(int timeout) {
+        waitFor(Duration.ofSeconds(timeout), Duration.ofSeconds(10), "The background tasks did not finish in " + timeout + " seconds.", this::didAllBgTasksFinish);
+    }
+
+    private boolean didAllBgTasksFinish() {
+        for (int i = 0; i < 5; i++) {
+            IdeStatusBar ideStatusBar = remoteRobot.find(IdeStatusBar.class);
+            List<RemoteText> inlineProgressPanelContent = ideStatusBar.inlineProgressPanel().findAllText();
+            if (!inlineProgressPanelContent.isEmpty()) {
+                System.out.println("================");
+                for (RemoteText item : inlineProgressPanelContent){
+                    System.out.println(item.getText());
+                }
+                System.out.println("================");
+                return false;
+            }
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+//                LOGGER.log(Level.SEVERE, e.getMessage(), e);
+                Thread.currentThread().interrupt();
+            }
+        }
+        return true;
     }
 
     private void minimizeProjectImportPopupIfItAppears() {
