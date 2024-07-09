@@ -24,6 +24,13 @@ public final class VersionMatcher {
     return isVersionMatch(targetVersions.value(), targetVersions.checkBaseVersions());
   }
 
+  public boolean isVersionMatch(@Nullable String[] targetVersions, final boolean checkBaseVersions) {
+    for (String t : targetVersions) {
+      if (!isVersionMatch(t, checkBaseVersions)) return false;
+    }
+    return true;
+  }
+
   public boolean isVersionMatch(@Nullable String targetVersions, boolean checkBaseVersions) {
     if (targetVersions == null || targetVersions.isEmpty()) return true;
 

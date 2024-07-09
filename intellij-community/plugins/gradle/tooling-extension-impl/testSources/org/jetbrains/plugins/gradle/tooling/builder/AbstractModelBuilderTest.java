@@ -1,4 +1,4 @@
-// Copyright 2000-2020 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+// Copyright 2000-2023 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package org.jetbrains.plugins.gradle.tooling.builder;
 
 import com.amazon.ion.IonType;
@@ -13,7 +13,6 @@ import com.intellij.testFramework.UsefulTestCase;
 import com.intellij.util.Function;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.lang.JavaVersion;
-import gnu.trove.THash;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import org.codehaus.groovy.runtime.typehandling.ShortTypeHandling;
 import org.gradle.internal.impldep.com.google.common.collect.Multimap;
@@ -28,17 +27,18 @@ import org.gradle.util.GradleVersion;
 import org.hamcrest.CustomMatcher;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.gradle.frameworkSupport.buildscript.GradleBuildScriptBuilderUtil;
+import org.jetbrains.plugins.gradle.jvmcompat.GradleJvmSupportMatrix;
 import org.jetbrains.plugins.gradle.model.BuildScriptClasspathModel;
 import org.jetbrains.plugins.gradle.model.ClassSetImportModelProvider;
 import org.jetbrains.plugins.gradle.model.ClasspathEntryModel;
 import org.jetbrains.plugins.gradle.model.ProjectImportAction;
 import org.jetbrains.plugins.gradle.service.execution.GradleExecutionHelper;
+import org.jetbrains.plugins.gradle.service.execution.GradleInitScriptUtil;
 import org.jetbrains.plugins.gradle.settings.DistributionType;
 import org.jetbrains.plugins.gradle.settings.GradleExecutionSettings;
 import org.jetbrains.plugins.gradle.tooling.VersionMatcherRule;
 import org.jetbrains.plugins.gradle.tooling.internal.init.Init;
 import org.jetbrains.plugins.gradle.util.GradleConstants;
-import org.jetbrains.plugins.gradle.util.GradleJvmSupportMatriciesKt;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -54,13 +54,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.intellij.util.containers.ContainerUtil.set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assume.assumeThat;
@@ -89,7 +89,7 @@ public abstract class AbstractModelBuilderTest {
   }
 
   @Parameterized.Parameters(name = "{index}: with Gradle-{0}")
-  public static Collection<Object[]> data() {
+  public static Iterable<?> data() {
     return Arrays.asList(VersionMatcherRule.SUPPORTED_GRADLE_VERSIONS);
   }
 
@@ -111,10 +111,10 @@ public abstract class AbstractModelBuilderTest {
     FileUtil.ensureExists(testDir);
 
     GradleVersion _gradleVersion = GradleVersion.version(gradleVersion);
-    String compileConfiguration = GradleBuildScriptBuilderUtil.isSupportedJavaLibraryPlugin(_gradleVersion) ? "implementation" : "compile";
-    String testCompileConfiguration = GradleBuildScriptBuilderUtil.isSupportedJavaLibraryPlugin(_gradleVersion)
+    String compileConfiguration = GradleBuildScriptBuilderUtil.isJavaLibraryPluginSupported(_gradleVersion) ? "implementation" : "compile";
+    String testCompileConfiguration = GradleBuildScriptBuilderUtil.isJavaLibraryPluginSupported(_gradleVersion)
                                       ? "testImplementation" : "testCompile";
-    String integrationTestCompileConfiguration = GradleBuildScriptBuilderUtil.isSupportedJavaLibraryPlugin(_gradleVersion)
+    String integrationTestCompileConfiguration = GradleBuildScriptBuilderUtil.isJavaLibraryPluginSupported(_gradleVersion)
                                                  ? "integrationTestImplementation"
                                                  : "integrationTestCompile";
     try (InputStream buildScriptStream = getClass().getResourceAsStream('/' + methodName + '/' + GradleConstants.DEFAULT_SCRIPT_NAME)) {
@@ -151,13 +151,12 @@ public abstract class AbstractModelBuilderTest {
       boolean isCompositeBuildsSupported = _gradleVersion.compareTo(GradleVersion.version("3.1")) >= 0;
       final ProjectImportAction projectImportAction = new ProjectImportAction(false, isCompositeBuildsSupported);
       projectImportAction.addProjectImportModelProvider(new ClassSetImportModelProvider(getModels(),
-                                                                                        ContainerUtil.<Class<?>>set(IdeaProject.class)));
+                                                                                        Collections.<Class<?>>singleton(IdeaProject.class)));
       BuildActionExecuter<ProjectImportAction.AllModels> buildActionExecutor = connection.action(projectImportAction);
       GradleExecutionSettings executionSettings = new GradleExecutionSettings(null, null, DistributionType.BUNDLED, false);
       GradleExecutionHelper.attachTargetPathMapperInitScript(executionSettings);
-      File initScript = GradleExecutionHelper.generateInitScript(false, getToolingExtensionClasses());
-      assertNotNull(initScript);
-      executionSettings.withArguments(GradleConstants.INIT_SCRIPT_CMD_OPTION, initScript.getAbsolutePath());
+      Path initScript = GradleInitScriptUtil.createMainInitScript(false, getToolingExtensionClasses());
+      executionSettings.withArguments(GradleConstants.INIT_SCRIPT_CMD_OPTION, initScript.toString());
 
       buildActionExecutor.withArguments(executionSettings.getArguments());
       String jdkHome = IdeaTestUtil.requireRealJdkHome();
@@ -169,9 +168,8 @@ public abstract class AbstractModelBuilderTest {
   }
 
   public static void assumeGradleCompatibleWithJava(@NotNull String gradleVersion) {
-    assumeTrue("Gradle version [" + gradleVersion + "] is incompatible with Java version [" + JavaVersion.current() + "]",
-               GradleJvmSupportMatriciesKt.isSupported(GradleVersion.version(gradleVersion),
-                                                       JavaVersion.current()));
+    assumeTrue("Gradle [" + gradleVersion + "] cannot be execution on Java [" + JavaVersion.current() + "]",
+               GradleJvmSupportMatrix.isSupported(GradleVersion.version(gradleVersion), JavaVersion.current()));
 
     if (GradleVersion.version(gradleVersion).getBaseVersion().compareTo(GradleVersion.version("4.8")) < 0) {
       assumeThat(JavaVersion.current().feature, new CustomMatcher<Integer>("Java version older than 9") {
@@ -185,7 +183,7 @@ public abstract class AbstractModelBuilderTest {
 
   @NotNull
   public static Set<Class<?>> getToolingExtensionClasses() {
-    return set(
+    return ContainerUtil.immutableSet(
       // external-system-rt.jar
       ExternalSystemSourceType.class,
       // gradle-tooling-extension-api jar
@@ -194,8 +192,6 @@ public abstract class AbstractModelBuilderTest {
       Init.class,
       Multimap.class,
       ShortTypeHandling.class,
-      // trove4j jar
-      THash.class,
       // fastutil
       Object2ObjectMap.class,
       // ion-java jar

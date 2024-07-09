@@ -80,19 +80,12 @@ public abstract class ExternalSystemImportingTestCase extends ExternalSystemTest
     assertModulesContains(myProject, expectedNames);
   }
 
-  public static void assertModules(@NotNull Project project, String... expectedNames) {
-    Module[] actual = ModuleManager.getInstance(project).getModules();
-    List<String> actualNames = new ArrayList<>();
-
-    for (Module m : actual) {
-      actualNames.add(m.getName());
-    }
-
-    Assertions.assertThat(actualNames).containsExactlyInAnyOrder(expectedNames);
-  }
-
   protected void assertModules(String... expectedNames) {
-    assertModules(myProject, expectedNames);
+    Module[] actualModules = ModuleManager.getInstance(myProject).getModules();
+
+    Assertions.assertThat(actualModules)
+      .extracting("name")
+      .containsExactlyInAnyOrder(expectedNames);
   }
 
   protected void assertContentRoots(String moduleName, String... expectedRoots) {
@@ -179,6 +172,7 @@ public abstract class ExternalSystemImportingTestCase extends ExternalSystemTest
 
   private void doAssertContentFolders(String moduleName, @NotNull JpsModuleSourceRootType<?> rootType, String... expected) {
     final ContentEntry[] contentRoots = getContentRoots(moduleName);
+    Arrays.sort(contentRoots, Comparator.comparing(ContentEntry::getUrl));
     final String rootUrl = contentRoots.length > 1 ? ExternalSystemApiUtil.getExternalProjectPath(getModule(moduleName)) : null;
     doAssertContentFolders(rootUrl, contentRoots, rootType, expected);
   }
@@ -424,7 +418,7 @@ public abstract class ExternalSystemImportingTestCase extends ExternalSystemTest
     for (DataNode<?> node : nodes) {
       node.visit(dataNode -> dataNode.setIgnored(ignored));
     }
-    ApplicationManager.getApplication().getService(ProjectDataManager.class).importData(projectDataNode, myProject, true);
+    ApplicationManager.getApplication().getService(ProjectDataManager.class).importData(projectDataNode, myProject);
   }
 
   protected void importProject(@NonNls String config, Boolean skipIndexing) throws IOException {
@@ -463,7 +457,12 @@ public abstract class ExternalSystemImportingTestCase extends ExternalSystemTest
             System.err.println("Got null External project after import");
             return;
           }
-          ApplicationManager.getApplication().getService(ProjectDataManager.class).importData(externalProject, myProject, true);
+          try {
+            ApplicationManager.getApplication().getService(ProjectDataManager.class).importData(externalProject, myProject);
+          } catch (Throwable ex) {
+            ex.printStackTrace(System.err);
+            error.set(Couple.of("Exception occurred in `ProjectDataManager.importData` (see output for the details)", null));
+          }
           System.out.println("External project was successfully imported");
         }
 

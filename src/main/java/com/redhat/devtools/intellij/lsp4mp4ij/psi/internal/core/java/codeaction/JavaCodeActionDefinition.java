@@ -15,11 +15,14 @@ package com.redhat.devtools.intellij.lsp4mp4ij.psi.internal.core.java.codeaction
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.intellij.openapi.extensions.ExtensionPointName;
 import com.intellij.openapi.extensions.RequiredElement;
+import com.intellij.openapi.progress.ProcessCanceledException;
+import com.intellij.openapi.project.IndexNotReadyException;
 import com.intellij.serviceContainer.BaseKeyedLazyInstance;
 import com.intellij.util.xmlb.annotations.Attribute;
 import com.redhat.devtools.intellij.lsp4mp4ij.psi.core.java.codeaction.IJavaCodeActionParticipant;
@@ -59,6 +62,12 @@ public class JavaCodeActionDefinition extends BaseKeyedLazyInstance<IJavaCodeAct
 	public boolean isAdaptedForCodeAction(JavaCodeActionContext context) {
 		try {
 			return getInstance().isAdaptedForCodeAction(context);
+		} catch (ProcessCanceledException e) {
+			//Since 2024.2 ProcessCanceledException extends CancellationException so we can't use multicatch to keep backward compatibility
+			//TODO delete block when minimum required version is 2024.2
+			throw e;
+		} catch (IndexNotReadyException | CancellationException e) {
+			throw e;
 		} catch (Exception e) {
 			LOGGER.log(Level.WARNING, "Error while calling isAdaptedForCodeAction", e);
 			return false;
@@ -70,6 +79,12 @@ public class JavaCodeActionDefinition extends BaseKeyedLazyInstance<IJavaCodeAct
 		try {
 			List<? extends CodeAction> codeActions = getInstance().getCodeActions(context, diagnostic);
 			return codeActions != null ? codeActions : Collections.emptyList();
+		} catch (ProcessCanceledException e) {
+			//Since 2024.2 ProcessCanceledException extends CancellationException so we can't use multicatch to keep backward compatibility
+			//TODO delete block when minimum required version is 2024.2
+			throw e;
+		} catch (IndexNotReadyException | CancellationException e) {
+			throw e;
 		} catch (Exception e) {
 			LOGGER.log(Level.WARNING, "Error while calling getCodeActions", e);
 			return Collections.emptyList();

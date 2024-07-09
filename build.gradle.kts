@@ -117,7 +117,16 @@ dependencies {
         builtBy("copyDeps")
     })
 
-    testImplementation("com.redhat.devtools.intellij:intellij-common-ui-test-library:0.2.0")
+    testImplementation("com.redhat.devtools.intellij:intellij-common-ui-test-library:0.4.0")
+
+    // And now for some serious HACK!!!
+    // Starting with 2023.1, all gradle tests fail importing projects with a:
+    // com.intellij.openapi.externalSystem.model.ExternalSystemException: Unable to load class 'org.codehaus.plexus.logging.Logger'
+    // Hence adding a jar containing the missing class, to the test classpath
+    // The version matches the jar found in the IJ version used to compile the project
+    // This is so wrong/ridiculous!
+    testImplementation("org.eclipse.sisu:org.eclipse.sisu.plexus:0.3.4")
+
     testImplementation("org.assertj:assertj-core:3.19.0")
 }
 
@@ -193,6 +202,7 @@ tasks.withType<Test> {
     systemProperty("idea.log.leaked.projects.in.tests", "false")
     systemProperty( "idea.maven.test.mirror", "https://repo1.maven.org/maven2")
     systemProperty( "com.redhat.devtools.intellij.telemetry.mode", "disabled")
+    systemProperty("java.awt.headless","true")
 }
 
 tasks.withType<Copy> {
@@ -260,7 +270,7 @@ tasks {
     // Configure UI tests plugin
     // Read more: https://github.com/JetBrains/intellij-ui-test-robot
     runIdeForUiTests {
-        systemProperty("robot-server.port", "8082")
+        systemProperty("robot-server.port", System.getProperty("robot-server.port"))
         systemProperty("ide.mac.message.dialogs.as.sheets", "false")
         systemProperty("jb.privacy.policy.text", "<!--999.999-->")
         systemProperty("jb.consents.confirmation.enabled", "false")

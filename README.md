@@ -3,8 +3,7 @@
 [plugin-repo]: https://plugins.jetbrains.com/plugin/13234-quarkus
 [plugin-version-svg]: https://img.shields.io/jetbrains/plugin/v/13234-quarkus.svg
 [plugin-downloads-svg]: https://img.shields.io/jetbrains/plugin/d/13234-quarkus.svg
-
-![Java CI with Gradle](https://github.com/redhat-developer/intellij-quarkus/workflows/Java%20CI%20with%20Gradle/badge.svg)
+[![Java CI with Gradle](https://github.com/redhat-developer/intellij-quarkus/actions/workflows/ci.yml/badge.svg)](https://github.com/redhat-developer/intellij-quarkus/actions/workflows/ci.yml)
 ![Validate against IJ versions](https://github.com/redhat-developer/intellij-quarkus/workflows/Validate%20against%20IJ%20versions/badge.svg)
 [![JetBrains plugins][plugin-version-svg]][plugin-repo]
 [![JetBrains plugins][plugin-downloads-svg]][plugin-repo]
@@ -238,7 +237,7 @@ When editing `application.properties` files, you have access to:
 
 ## Requirements
 
-  * Intellij IDEA 2022.2 or more recent (we **try** to support the last 4 major IDEA releases)
+  * Intellij IDEA 2023.2 or more recent (we **try** to support the last 4 major IDEA releases)
   * Java JDK (or JRE) 17 or more recent
 
     ​    
